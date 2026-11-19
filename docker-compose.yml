@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mbwira
+      POSTGRES_USER: mbwira
+      POSTGRES_PASSWORD: mbwira
+    ports:
+      - "5432:5432"
+    volumes:
+      - mbwira_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mbwira -d mbwira"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mbwira_pgdata:
