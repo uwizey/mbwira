@@ -1,0 +1,98 @@
+:root {
+  /* Brand palette: burgundy and rose */
+  --mb-dark: #3B1219;          /* top bar */
+  --mb-dark-2: #5A1A26;        /* hover on dark areas */
+  --mb-primary: #A52A47;       /* buttons, links */
+  --mb-primary-hover: #8A2039;
+  --mb-accent: #F0A3AE;        /* rose: accents on dark bar */
+  --mb-tint: #FBEEF0;          /* very light rose: hovers, highlights */
+
+  /* Neutrals (slightly warm) */
+  --mb-bg: #FAF5F5;
+  --mb-surface: #FFFFFF;
+  --mb-text: #2A1A1D;
+  --mb-muted: #6B5A5E;
+  --mb-border: #E8DCDD;
+
+  /* Severity (kept apart from the brand color on purpose) */
+  --mb-sev-low: #2E9E6B;
+  --mb-sev-medium: #E0A100;
+  --mb-sev-high: #E8590C;
+  --mb-sev-critical: #C81E1E;
+
+  /* Bootstrap overrides */
+  --bs-primary: #A52A47;
+  --bs-primary-rgb: 165, 42, 71;
+  --bs-link-color: #A52A47;
+  --bs-link-hover-color: #8A2039;
+  --bs-body-color: #2A1A1D;
+  --bs-body-bg: #FAF5F5;
+  --bs-border-color: #E8DCDD;
+  --bs-border-radius: 0.5rem;
+  --bs-font-sans-serif: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body { background: var(--mb-bg); color: var(--mb-text); }
+h1, h2, h3, h4, h5 { color: var(--mb-dark); font-weight: 600; }
+.text-muted { color: var(--mb-muted) !important; }
+
+/* Top bar */
+.navbar-mbwira {
+  background: var(--mb-dark);
+  border-bottom: 3px solid var(--mb-accent);
+}
+.navbar-mbwira .navbar-brand { font-weight: 700; letter-spacing: 0.3px; color: #fff; }
+.navbar-mbwira .brand-dot { color: var(--mb-accent); }
+
+/* Buttons */
+.btn-primary {
+  --bs-btn-bg: var(--mb-primary);
+  --bs-btn-border-color: var(--mb-primary);
+  --bs-btn-hover-bg: var(--mb-primary-hover);
+  --bs-btn-hover-border-color: var(--mb-primary-hover);
+  --bs-btn-active-bg: var(--mb-primary-hover);
+  --bs-btn-active-border-color: var(--mb-primary-hover);
+  --bs-btn-disabled-bg: var(--mb-primary);
+  --bs-btn-disabled-border-color: var(--mb-primary);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--mb-primary);
+  --bs-btn-border-color: var(--mb-primary);
+  --bs-btn-hover-bg: var(--mb-primary);
+  --bs-btn-hover-border-color: var(--mb-primary);
+  --bs-btn-active-bg: var(--mb-primary-hover);
+}
+.navbar-mbwira .btn-outline-light:hover { color: var(--mb-dark); }
+
+/* Cards, forms, tables */
+.card { background: var(--mb-surface); border: 1px solid var(--mb-border); border-radius: 0.75rem; }
+.form-control:focus, .form-select:focus {
+  border-color: var(--mb-primary);
+  box-shadow: 0 0 0 0.2rem rgba(165, 42, 71, 0.18);
+}
+.table > :not(caption) > * > * { padding: 0.75rem; }
+.table thead th {
+  color: var(--mb-muted); font-weight: 600; font-size: 0.8rem;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.table-hover > tbody > tr:hover > * { --bs-table-hover-bg: var(--mb-tint); }
+
+/* Severity badges (always shown with their text label) */
+.badge-sev { color: #fff; font-weight: 600; }
+.sev-low { background: var(--mb-sev-low); }
+.sev-medium { background: var(--mb-sev-medium); color: #2A1A1D; }
+.sev-high { background: var(--mb-sev-high); }
+.sev-critical { background: var(--mb-sev-critical); }
+
+/* Status badges */
+.badge-status { font-weight: 600; }
+.st-reported { background: #ECE7E8; color: #4A3A3E; }
+.st-under_review { background: #FBE3E7; color: #7A1E34; }
+.st-investigating { background: #FDE9D4; color: #8A4208; }
+.st-resolved { background: #DDF3E7; color: #1F7A4D; }
+.st-closed { background: #EEEAEA; color: #6B5A5E; }
+
+/* Auth pages */
+.auth-wrap { min-height: 70vh; display: flex; align-items: center; }
+.auth-brand { font-size: 1.75rem; font-weight: 700; color: var(--mb-dark); }
+.auth-brand span { color: var(--mb-primary); }
