@@ -1,7 +1,7 @@
 from pathlib import Path
-from django.contrib.messages import constants as message_constants
 
 import environ
+from django.contrib.messages import constants as message_constants
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
