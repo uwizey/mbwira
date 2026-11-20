@@ -18,8 +18,11 @@ class AuditLogTests(TestCase):
 
     def test_log_action_records_who_what_and_when(self):
         entry = log_action(
-            self.user, "organization.created", obj=self.org,
-            organization=self.org, details={"name": "Org A"},
+            self.user,
+            "organization.created",
+            obj=self.org,
+            organization=self.org,
+            details={"name": "Org A"},
         )
         self.assertEqual(entry.actor, self.user)
         self.assertEqual(entry.organization, self.org)

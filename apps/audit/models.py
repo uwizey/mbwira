@@ -1,12 +1,14 @@
 from django.conf import settings
 from django.db import models
 
+from apps.core.managers import OrganizationQuerySet
+
 
 class AuditLogImmutableError(Exception):
     """Raised when code tries to change or delete an audit record."""
 
 
-class AuditLogQuerySet(models.QuerySet):
+class AuditLogQuerySet(OrganizationQuerySet):
     def update(self, **kwargs):
         raise AuditLogImmutableError("Audit records cannot be updated.")
 
