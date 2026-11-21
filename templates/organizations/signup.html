@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Register your organization · Mbwira{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-1">Register your organization</h1>
+        <p class="text-muted small">You become its first administrator and can invite your team afterward.</p>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <button class="btn btn-primary w-100 mt-2" type="submit">Create organization</button>
+        </form>
+        <p class="small text-muted mt-3 mb-0">Already registered? <a href="{% url 'accounts:login' %}">Log in</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
