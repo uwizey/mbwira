@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Team · Mbwira{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Team</h1>
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5">Invite someone</h2>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <button class="btn btn-primary w-100" type="submit">Send invitation</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5">Members ({{ memberships|length }})</h2>
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+          <tbody>
+            {% for m in memberships %}
+            <tr><td>{{ m.user.full_name }}</td><td>{{ m.user.email }}</td><td>{{ m.get_role_display }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5">Recent invitations</h2>
+        <table class="table mb-0">
+          <thead><tr><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for i in invitations %}
+            <tr>
+              <td>{{ i.email }}</td>
+              <td>{{ i.get_role_display }}</td>
+              <td>
+                {% if i.is_used %}<span class="badge badge-status st-resolved">Accepted</span>
+                {% elif i.is_expired %}<span class="badge badge-status st-closed">Expired</span>
+                {% else %}<span class="badge badge-status st-under_review">Pending</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-muted">No invitations yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

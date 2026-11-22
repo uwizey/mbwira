@@ -93,3 +93,5 @@ MESSAGE_TAGS = {message_constants.ERROR: "danger"}
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Mbwira <no-reply@mbwira.local>")

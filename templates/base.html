@@ -15,6 +15,9 @@
     <div class="d-flex align-items-center gap-3">
       {% if user.is_authenticated %}
         <span class="text-white-50 small d-none d-md-inline">{{ user.email }}</span>
+        {% if request.membership and request.membership.role == "org_admin" %}
+          <a class="btn btn-sm btn-outline-light" href="{% url 'organizations:team' %}">Team</a>
+        {% endif %}
         <a class="btn btn-sm btn-outline-light" href="{% url 'accounts:password_change' %}">Password</a>
         <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
           {% csrf_token %}
