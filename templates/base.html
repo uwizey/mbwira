@@ -18,6 +18,9 @@
         {% if request.membership and request.membership.role == "org_admin" %}
           <a class="btn btn-sm btn-outline-light" href="{% url 'organizations:team' %}">Team</a>
         {% endif %}
+                {% if request.membership and request.membership.role != "employee" %}
+          <a class="btn btn-sm btn-outline-light" href="{% url 'assets:list' %}">Assets</a>
+        {% endif %}
         <a class="btn btn-sm btn-outline-light" href="{% url 'accounts:password_change' %}">Password</a>
         <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
           {% csrf_token %}

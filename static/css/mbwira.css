@@ -96,3 +96,9 @@ h1, h2, h3, h4, h5 { color: var(--mb-dark); font-weight: 600; }
 .auth-wrap { min-height: 70vh; display: flex; align-items: center; }
 .auth-brand { font-size: 1.75rem; font-weight: 700; color: var(--mb-dark); }
 .auth-brand span { color: var(--mb-primary); }
+
+/* Asset status badges */
+.as-active { background: #DDF3E7; color: #1F7A4D; }
+.as-under_repair { background: #FDE9D4; color: #8A4208; }
+.as-retired { background: #EEEAEA; color: #6B5A5E; }
+.as-lost { background: #FBE3E7; color: #7A1E34; }

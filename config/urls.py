@@ -23,5 +23,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("apps.accounts.urls")),
     path("", login_required(TemplateView.as_view(template_name="home.html")), name="home"),
-        path("organizations/", include("apps.organizations.urls")),
+    path("organizations/", include("apps.organizations.urls")),
+    path("assets/", include("apps.assets.urls")),
 ]
