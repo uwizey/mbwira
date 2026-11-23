@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ object.reference }} · Mbwira{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <div class="text-muted small">{{ object.reference }} &middot; {{ object.get_incident_type_display }}</div>
+    <h1 class="h3 mb-2">{{ object.title }}</h1>
+    <span class="badge badge-status st-{{ object.status }}">{{ object.get_status_display }}</span>
+    {% if object.severity %}<span class="badge badge-sev sev-{{ object.severity }}">{{ object.get_severity_display }}</span>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{% if can_triage %}{% url 'incidents:list' %}{% else %}{% url 'incidents:mine' %}{% endif %}">Back</a>
+    {% if can_triage %}<a class="btn btn-primary" href="{% url 'incidents:triage' object.pk %}">Triage</a>{% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase">Description</h2>
+        <div>{{ object.description|linebreaks }}</div>
+        {% if object.resolution_summary %}
+          <h2 class="h6 text-muted text-uppercase mt-4">Resolution summary</h2>
+          <div>{{ object.resolution_summary|linebreaks }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <dl class="mb-0">
+          <dt>Category</dt><dd>{{ object.get_category_display|default:"Not set" }}</dd>
+          <dt>Reporter</dt><dd>{{ object.reporter.full_name }}</dd>
+          <dt>Assignee</dt><dd>{{ object.assignee.full_name|default:"Unassigned" }}</dd>
+          <dt>Happened</dt><dd>{{ object.occurred_at|date:"j M Y, H:i" }}</dd>
+          <dt>Reported</dt><dd class="mb-0">{{ object.created_at|date:"j M Y, H:i" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

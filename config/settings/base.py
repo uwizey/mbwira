@@ -27,7 +27,8 @@ INSTALLED_APPS = [
     "apps.organizations",
     "apps.core",
     "apps.audit",
-    "apps.assets"
+    "apps.assets",
+    "apps.incidents",
 
 ]
 
