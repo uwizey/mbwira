@@ -33,26 +33,43 @@
     <div class="card shadow-sm">
       <div class="card-body">
         <h2 class="h5">Recent invitations</h2>
-        <table class="table mb-0">
-          <thead><tr><th>Email</th><th>Role</th><th>Status</th></tr></thead>
-          <tbody>
-            {% for i in invitations %}
-            <tr>
-              <td>{{ i.email }}</td>
-              <td>{{ i.get_role_display }}</td>
-              <td>
-                {% if i.is_used %}<span class="badge badge-status st-resolved">Accepted</span>
-                {% elif i.is_expired %}<span class="badge badge-status st-closed">Expired</span>
-                {% else %}<span class="badge badge-status st-under_review">Pending</span>{% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-muted">No invitations yet.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <p class="small text-muted">Email delivery is not set up yet. Copy the link of a pending invitation and send it to the person yourself.</p>
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {% for i in invitations %}
+              <tr>
+                <td>{{ i.email }}</td>
+                <td>{{ i.get_role_display }}</td>
+                <td>
+                  {% if i.is_used %}<span class="badge badge-status st-resolved">Accepted</span>
+                  {% elif i.is_expired %}<span class="badge badge-status st-closed">Expired</span>
+                  {% else %}<span class="badge badge-status st-under_review">Pending</span>{% endif %}
+                </td>
+                <td class="text-end">
+                  {% if i.link %}<button type="button" class="btn btn-sm btn-outline-primary" data-copy="{{ i.link }}">Copy link</button>{% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-muted">No invitations yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </div>
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (button) {
+  button.addEventListener("click", function () {
+    navigator.clipboard.writeText(button.dataset.copy).then(function () {
+      var original = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(function () { button.textContent = original; }, 1500);
+    });
+  });
+});
+</script>
 {% endblock %}

@@ -21,12 +21,43 @@
         <h2 class="h6 text-muted text-uppercase">Description</h2>
         <div>{{ object.description|linebreaks }}</div>
         {% if object.resolution_summary %}
-          <h2 class="h6 text-muted text-uppercase mt-4">Resolution summary</h2>
+          <h2 class="h6 text-muted text-uppercase mt-4">
+            {% if object.resolved_at %}Resolution summary{% else %}Reason for closing{% endif %}
+          </h2>
           <div>{{ object.resolution_summary|linebreaks }}</div>
         {% endif %}
       </div>
     </div>
+
+    <div class="card shadow-sm mt-4" id="comments">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase">Comments ({{ comments|length }})</h2>
+        {% for c in comments %}
+          <div class="border-bottom pb-3 mb-3">
+            <div class="small text-muted">
+              {{ c.author.full_name }} &middot; {{ c.created_at|date:"j M Y, H:i" }}
+              {% if c.is_internal %}<span class="badge text-bg-secondary">Internal</span>{% endif %}
+            </div>
+            <div>{{ c.body|linebreaksbr }}</div>
+          </div>
+        {% empty %}
+          <p class="text-muted">No comments yet.</p>
+        {% endfor %}
+        <form method="post" action="{% url 'incidents:comment' object.pk %}">
+          {% csrf_token %}
+          {{ comment_form.body }}
+          {% if can_mark_internal %}
+            <div class="form-check my-2">
+              {{ comment_form.is_internal }}
+              <label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">Internal note (hidden from the reporter)</label>
+            </div>
+          {% endif %}
+          <button class="btn btn-primary btn-sm mt-2" type="submit">Add comment</button>
+        </form>
+      </div>
+    </div>
   </div>
+
   <div class="col-lg-4">
     <div class="card shadow-sm">
       <div class="card-body">
@@ -35,10 +66,30 @@
           <dt>Reporter</dt><dd>{{ object.reporter.full_name }}</dd>
           <dt>Assignee</dt><dd>{{ object.assignee.full_name|default:"Unassigned" }}</dd>
           <dt>Happened</dt><dd>{{ object.occurred_at|date:"j M Y, H:i" }}</dd>
-          <dt>Reported</dt><dd class="mb-0">{{ object.created_at|date:"j M Y, H:i" }}</dd>
+          <dt>Reported</dt><dd>{{ object.created_at|date:"j M Y, H:i" }}</dd>
+          {% if object.resolved_at %}<dt>Resolved</dt><dd class="mb-0">{{ object.resolved_at|date:"j M Y, H:i" }}</dd>{% endif %}
         </dl>
       </div>
     </div>
+
+    {% if transitions %}
+    <div class="card shadow-sm mt-4">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase">Actions</h2>
+        {% for t in transitions %}
+        <form method="post" action="{% url 'incidents:transition' object.pk %}" class="mb-3">
+          {% csrf_token %}
+          <input type="hidden" name="to_status" value="{{ t.to }}">
+          {% if t.text %}
+            <label class="form-label small">{{ t.text }}</label>
+            <textarea name="note" class="form-control mb-2" rows="3" required></textarea>
+          {% endif %}
+          <button class="btn btn-sm w-100 {% if t.style == 'primary' %}btn-primary{% else %}btn-outline-primary{% endif %}" type="submit">{{ t.label }}</button>
+        </form>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

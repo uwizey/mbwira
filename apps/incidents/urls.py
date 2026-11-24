@@ -1,10 +1,12 @@
 from django.urls import path
 
 from .views import (
+    CommentCreateView,
     IncidentCreateView,
     IncidentDetailView,
     IncidentListView,
     MyIncidentsView,
+    TransitionView,
     TriageView,
 )
 
@@ -16,4 +18,6 @@ urlpatterns = [
     path("new/", IncidentCreateView.as_view(), name="create"),
     path("<int:pk>/", IncidentDetailView.as_view(), name="detail"),
     path("<int:pk>/triage/", TriageView.as_view(), name="triage"),
+    path("<int:pk>/transition/", TransitionView.as_view(), name="transition"),
+    path("<int:pk>/comment/", CommentCreateView.as_view(), name="comment"),
 ]

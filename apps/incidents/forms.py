@@ -56,3 +56,15 @@ class TriageForm(forms.Form):
         if incident_type and category and category not in CATEGORIES_BY_TYPE[incident_type]:
             self.add_error("category", "This category does not match the incident type.")
         return cleaned
+class CommentForm(forms.Form):
+    body = forms.CharField(
+        label="",
+        widget=forms.Textarea(
+            attrs={"rows": 3, "class": "form-control", "placeholder": "Add a comment"}
+        ),
+    )
+    is_internal = forms.BooleanField(
+        required=False,
+        label="Internal note (hidden from the reporter)",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )

@@ -119,3 +119,19 @@ class Incident(models.Model):
 
     def get_absolute_url(self):
         return reverse("incidents:detail", args=[self.pk])
+
+class IncidentComment(models.Model):
+    incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="incident_comments"
+    )
+    body = models.TextField()
+    is_internal = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        indexes = [models.Index(fields=["incident", "created_at"])]
+
+    def __str__(self):
+        return f"Comment on {self.incident.reference} by {self.author}"

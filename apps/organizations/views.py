@@ -57,8 +57,18 @@ class TeamView(RoleRequiredMixin, FormView):
         context["memberships"] = organization.memberships.select_related("user").order_by(
             "user__full_name"
         )
-        context["invitations"] = organization.invitations.order_by("-created_at")[:20]
+        invitations = list(organization.invitations.order_by("-created_at")[:20])
+        for invitation in invitations:
+            invitation.link = (
+                self.request.build_absolute_uri(
+                    reverse("organizations:accept_invitation", args=[invitation.token])
+                )
+                if invitation.is_valid
+                else ""
+            )
+        context["invitations"] = invitations
         return context
+
 
     def form_valid(self, form):
         try:

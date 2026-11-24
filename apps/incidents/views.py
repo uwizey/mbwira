@@ -1,22 +1,36 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
+from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 
 from apps.core.mixins import OrganizationRequiredMixin, OrganizationScopedMixin, RoleRequiredMixin
 from apps.organizations.models import Role
 
-from .forms import ReportIncidentForm, TriageForm
+from .forms import CommentForm, ReportIncidentForm, TriageForm
 from .models import Incident, IncidentStatus, IncidentType, Severity
-from .services import create_incident, triage_incident
+from .services import (
+    WorkflowError,
+    add_comment,
+    available_transitions,
+    create_incident,
+    transition_incident,
+    triage_incident,
+)
 
 STAFF_ROLES = (Role.ORG_ADMIN, Role.SECURITY_MANAGER, Role.SECURITY_ANALYST)
 TRIAGE_ROLES = (Role.SECURITY_MANAGER, Role.SECURITY_ANALYST)
 
 
-class IncidentQuerysetMixin(OrganizationScopedMixin):
+def incidents_for(request):
     """Own organization only. Employees additionally see only their own reports."""
+    queryset = Incident.objects.for_organization(request.organization)
+    if request.membership.role == Role.EMPLOYEE:
+        queryset = queryset.filter(reporter=request.user)
+    return queryset
 
+
+class IncidentQuerysetMixin(OrganizationScopedMixin):
     def get_queryset(self):
         queryset = super().get_queryset().select_related("reporter", "assignee")
         if self.request.membership.role == Role.EMPLOYEE:
@@ -101,7 +115,18 @@ class IncidentDetailView(IncidentQuerysetMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["can_triage"] = self.request.membership.role in TRIAGE_ROLES
+        role = self.request.membership.role
+        incident = self.object
+        comments = incident.comments.select_related("author")
+        if role == Role.EMPLOYEE:
+            comments = comments.filter(is_internal=False)
+        context.update(
+            can_triage=role in TRIAGE_ROLES,
+            can_mark_internal=role != Role.EMPLOYEE,
+            comments=comments,
+            transitions=available_transitions(incident, role),
+            comment_form=CommentForm(),
+        )
         return context
 
 
@@ -113,7 +138,9 @@ class TriageView(RoleRequiredMixin, FormView):
     def get_incident(self):
         if not hasattr(self, "_incident"):
             queryset = Incident.objects.for_organization(self.request.organization)
-            self._incident = get_object_or_404(queryset.select_related("assignee"), pk=self.kwargs["pk"])
+            self._incident = get_object_or_404(
+                queryset.select_related("assignee"), pk=self.kwargs["pk"]
+            )
         return self._incident
 
     def get_initial(self):
@@ -136,8 +163,54 @@ class TriageView(RoleRequiredMixin, FormView):
         return context
 
     def form_valid(self, form):
-        incident = triage_incident(
-            incident=self.get_incident(), actor=self.request.user, **form.cleaned_data
-        )
+        try:
+            incident = triage_incident(
+                incident=self.get_incident(), actor=self.request.user, **form.cleaned_data
+            )
+        except WorkflowError as error:
+            messages.error(self.request, str(error))
+            return redirect(self.get_incident())
         messages.success(self.request, f"{incident.reference} updated.")
         return redirect(incident)
+
+
+class TransitionView(RoleRequiredMixin, View):
+    """Status changes, POST only. Who may do what is decided in transition_incident()."""
+
+    allowed_roles = TRIAGE_ROLES
+
+    def post(self, request, pk):
+        incident = get_object_or_404(incidents_for(request), pk=pk)
+        try:
+            transition_incident(
+                incident=incident,
+                actor=request.user,
+                to_status=request.POST.get("to_status", ""),
+                note=request.POST.get("note", ""),
+            )
+        except WorkflowError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"{incident.reference} updated.")
+        return redirect(incident)
+
+
+class CommentCreateView(OrganizationRequiredMixin, View):
+    def post(self, request, pk):
+        incident = get_object_or_404(incidents_for(request), pk=pk)
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            try:
+                add_comment(
+                    incident=incident,
+                    author=request.user,
+                    body=form.cleaned_data["body"],
+                    is_internal=form.cleaned_data["is_internal"],
+                )
+            except WorkflowError as error:
+                messages.error(request, str(error))
+            else:
+                messages.success(request, "Comment added.")
+        else:
+            messages.error(request, "Write a comment first.")
+        return redirect(f"{incident.get_absolute_url()}#comments")
