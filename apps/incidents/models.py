@@ -1,9 +1,14 @@
+import os
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 from django.urls import reverse
 
 from apps.core.managers import OrganizationQuerySet
+
+from .storage import EvidenceStorage
 
 
 class IncidentType(models.TextChoices):
@@ -135,3 +140,40 @@ class IncidentComment(models.Model):
 
     def __str__(self):
         return f"Comment on {self.incident.reference} by {self.author}"
+
+class EvidenceImmutableError(Exception):
+    """Raised when code tries to change an evidence record."""
+
+
+def evidence_upload_path(instance, filename):
+    """Random stored name. Only the (already validated) extension is kept."""
+    ext = os.path.splitext(filename)[1].lower()
+    return f"{instance.incident.organization_id}/{instance.incident_id}/{uuid.uuid4().hex}{ext}"
+
+
+class IncidentEvidence(models.Model):
+    incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name="evidence")
+    file = models.FileField(
+        upload_to=evidence_upload_path, storage=EvidenceStorage(), max_length=255
+    )
+    original_name = models.CharField(max_length=200)
+    content_type = models.CharField(max_length=100)
+    size = models.PositiveIntegerField()
+    sha256 = models.CharField(max_length=64)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="uploaded_evidence"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        verbose_name_plural = "incident evidence"
+        indexes = [models.Index(fields=["incident", "created_at"])]
+
+    def __str__(self):
+        return f"{self.original_name} ({self.incident.reference})"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise EvidenceImmutableError("Evidence cannot be modified once uploaded.")
+        super().save(*args, **kwargs)

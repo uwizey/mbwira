@@ -29,6 +29,34 @@
       </div>
     </div>
 
+    <div class="card shadow-sm mt-4" id="evidence">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase">Evidence ({{ evidence|length }})</h2>
+        {% for e in evidence %}
+          <div class="d-flex justify-content-between gap-3 border-bottom py-2">
+            <div>
+              <a href="{% url 'incidents:evidence_download' e.pk %}" target="_blank" rel="noopener">{{ e.original_name }}</a>
+              <div class="small text-muted">{{ e.size|filesizeformat }} &middot; {{ e.uploaded_by.full_name }} &middot; {{ e.created_at|date:"j M Y, H:i" }}</div>
+              <div class="small text-muted">SHA-256: <code>{{ e.sha256|slice:":16" }}&hellip;</code></div>
+            </div>
+            <a class="btn btn-sm btn-outline-primary align-self-center" href="{% url 'incidents:evidence_download' e.pk %}?download=1">Download</a>
+          </div>
+        {% empty %}
+          <p class="text-muted">No evidence attached.</p>
+        {% endfor %}
+        {% if can_upload %}
+          <form method="post" enctype="multipart/form-data" action="{% url 'incidents:evidence_upload' object.pk %}" class="mt-3">
+            {% csrf_token %}
+            <input type="file" name="file" class="form-control mb-2" required accept=".png,.jpg,.jpeg,.gif,.pdf,.txt,.log,.csv,.eml">
+            <button class="btn btn-primary btn-sm" type="submit">Upload evidence</button>
+            <div class="form-text">PNG, JPG, GIF, PDF, TXT, LOG, CSV or EML, up to {{ max_mb }} MB. Files cannot be edited or deleted after upload.</div>
+          </form>
+        {% elif object.status == "closed" %}
+          <p class="small text-muted mt-3 mb-0">This incident is closed. A manager can reopen it to add evidence.</p>
+        {% endif %}
+      </div>
+    </div>
+
     <div class="card shadow-sm mt-4" id="comments">
       <div class="card-body">
         <h2 class="h6 text-muted text-uppercase">Comments ({{ comments|length }})</h2>

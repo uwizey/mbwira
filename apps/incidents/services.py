@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -5,7 +6,8 @@ from django.utils import timezone
 from apps.audit.services import log_action
 from apps.organizations.models import Membership, Organization, Role
 
-from .models import Incident, IncidentComment, IncidentStatus
+from .evidence import EvidenceRejected, inspect_upload
+from .models import Incident, IncidentComment, IncidentEvidence, IncidentStatus
 
 REPORTED = IncidentStatus.REPORTED.value
 UNDER_REVIEW = IncidentStatus.UNDER_REVIEW.value
@@ -233,3 +235,54 @@ def add_comment(*, incident, author, body, is_internal=False):
         },
     )
     return comment
+
+def can_upload_evidence(incident, user, role):
+    """Staff may add evidence to any open incident of their organization.
+    Anyone else only to an incident they reported themselves."""
+    if role is None or incident.status == CLOSED:
+        return False
+    return role in TRIAGE_ROLES or incident.reporter_id == user.pk
+
+
+@transaction.atomic
+def add_evidence(*, incident, uploader, uploaded_file):
+    """Validate and store one evidence file, and write the audit entry."""
+    role = _role_of(uploader, incident.organization_id)
+    if role is None:
+        raise WorkflowError("You are not a member of this organization.")
+    if incident.status == CLOSED:
+        raise WorkflowError("This incident is closed. Reopen it before adding evidence.")
+    if not can_upload_evidence(incident, uploader, role):
+        raise WorkflowError("You cannot add evidence to this incident.")
+    if incident.evidence.count() >= settings.EVIDENCE_MAX_FILES:
+        raise WorkflowError(
+            f"This incident already has the maximum of {settings.EVIDENCE_MAX_FILES} files."
+        )
+
+    try:
+        info = inspect_upload(uploaded_file)
+    except EvidenceRejected as error:
+        raise WorkflowError(str(error)) from error
+
+    evidence = IncidentEvidence.objects.create(
+        incident=incident,
+        file=uploaded_file,
+        original_name=info["name"],
+        content_type=info["content_type"],
+        size=info["size"],
+        sha256=info["sha256"],
+        uploaded_by=uploader,
+    )
+    log_action(
+        uploader,
+        "evidence.uploaded",
+        obj=incident,
+        details={
+            "reference": incident.reference,
+            "evidence_id": evidence.pk,
+            "filename": evidence.original_name,
+            "size": evidence.size,
+            "sha256": evidence.sha256,
+        },
+    )
+    return evidence

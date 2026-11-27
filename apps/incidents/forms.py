@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.organizations.models import Role
 
+from .evidence import EvidenceRejected, inspect_upload
 from .models import CATEGORIES_BY_TYPE, Category, IncidentType, Severity
 
 User = get_user_model()
@@ -25,12 +26,26 @@ class ReportIncidentForm(forms.Form):
         widget=forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
         input_formats=["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"],
     )
+    attachment = forms.FileField(
+        required=False,
+        label="Attachment (optional)",
+        help_text="A screenshot, PDF, log or saved email. Up to 5 MB.",
+    )
 
     def clean_occurred_at(self):
         value = self.cleaned_data["occurred_at"]
         if value > timezone.now():
             raise forms.ValidationError("The time cannot be in the future.")
         return value
+
+    def clean_attachment(self):
+        attachment = self.cleaned_data.get("attachment")
+        if attachment:
+            try:
+                inspect_upload(attachment)
+            except EvidenceRejected as error:
+                raise forms.ValidationError(str(error)) from error
+        return attachment
 
 
 class TriageForm(forms.Form):
@@ -44,10 +59,14 @@ class TriageForm(forms.Form):
     def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
         # Only security managers and analysts of this organization can be assigned.
-        self.fields["assignee"].queryset = User.objects.filter(
-            memberships__organization=organization,
-            memberships__role__in=[Role.SECURITY_MANAGER, Role.SECURITY_ANALYST],
-        ).distinct().order_by("full_name")
+        self.fields["assignee"].queryset = (
+            User.objects.filter(
+                memberships__organization=organization,
+                memberships__role__in=[Role.SECURITY_MANAGER, Role.SECURITY_ANALYST],
+            )
+            .distinct()
+            .order_by("full_name")
+        )
 
     def clean(self):
         cleaned = super().clean()
@@ -56,6 +75,8 @@ class TriageForm(forms.Form):
         if incident_type and category and category not in CATEGORIES_BY_TYPE[incident_type]:
             self.add_error("category", "This category does not match the incident type.")
         return cleaned
+
+
 class CommentForm(forms.Form):
     body = forms.CharField(
         label="",

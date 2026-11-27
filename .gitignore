@@ -8,3 +8,4 @@ staticfiles/
 .vscode/
 .coverage
 htmlcov/
+private_media/

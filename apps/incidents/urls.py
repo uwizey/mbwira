@@ -2,6 +2,8 @@ from django.urls import path
 
 from .views import (
     CommentCreateView,
+    EvidenceDownloadView,
+    EvidenceUploadView,
     IncidentCreateView,
     IncidentDetailView,
     IncidentListView,
@@ -20,4 +22,6 @@ urlpatterns = [
     path("<int:pk>/triage/", TriageView.as_view(), name="triage"),
     path("<int:pk>/transition/", TransitionView.as_view(), name="transition"),
     path("<int:pk>/comment/", CommentCreateView.as_view(), name="comment"),
+    path("<int:pk>/evidence/", EvidenceUploadView.as_view(), name="evidence_upload"),
+    path("evidence/<int:pk>/", EvidenceDownloadView.as_view(), name="evidence_download"),
 ]

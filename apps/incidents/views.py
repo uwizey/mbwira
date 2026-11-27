@@ -1,18 +1,25 @@
+from django.conf import settings
 from django.contrib import messages
+from django.db import transaction
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 
+from apps.audit.services import log_action
 from apps.core.mixins import OrganizationRequiredMixin, OrganizationScopedMixin, RoleRequiredMixin
 from apps.organizations.models import Role
 
+from .evidence import INLINE_TYPES
 from .forms import CommentForm, ReportIncidentForm, TriageForm
-from .models import Incident, IncidentStatus, IncidentType, Severity
+from .models import Incident, IncidentEvidence, IncidentStatus, IncidentType, Severity
 from .services import (
     WorkflowError,
     add_comment,
+    add_evidence,
     available_transitions,
+    can_upload_evidence,
     create_incident,
     transition_incident,
     triage_incident,
@@ -46,11 +53,22 @@ class IncidentCreateView(OrganizationRequiredMixin, FormView):
         return {"occurred_at": timezone.localtime(timezone.now())}
 
     def form_valid(self, form):
-        incident = create_incident(
-            organization=self.request.organization,
-            reporter=self.request.user,
-            **form.cleaned_data,
-        )
+        data = dict(form.cleaned_data)
+        attachment = data.pop("attachment", None)
+        try:
+            with transaction.atomic():
+                incident = create_incident(
+                    organization=self.request.organization,
+                    reporter=self.request.user,
+                    **data,
+                )
+                if attachment:
+                    add_evidence(
+                        incident=incident, uploader=self.request.user, uploaded_file=attachment
+                    )
+        except WorkflowError as error:
+            form.add_error(None, str(error))
+            return self.form_invalid(form)
         messages.success(self.request, f"{incident.reference} reported. Thank you.")
         return redirect(incident)
 
@@ -115,6 +133,7 @@ class IncidentDetailView(IncidentQuerysetMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
         role = self.request.membership.role
         incident = self.object
         comments = incident.comments.select_related("author")
@@ -126,6 +145,9 @@ class IncidentDetailView(IncidentQuerysetMixin, DetailView):
             comments=comments,
             transitions=available_transitions(incident, role),
             comment_form=CommentForm(),
+            evidence=incident.evidence.select_related("uploaded_by"),
+            can_upload=can_upload_evidence(incident, user, role),
+            max_mb=settings.EVIDENCE_MAX_BYTES // (1024 * 1024),
         )
         return context
 
@@ -214,3 +236,58 @@ class CommentCreateView(OrganizationRequiredMixin, View):
         else:
             messages.error(request, "Write a comment first.")
         return redirect(f"{incident.get_absolute_url()}#comments")
+
+
+class EvidenceUploadView(OrganizationRequiredMixin, View):
+    def post(self, request, pk):
+        incident = get_object_or_404(incidents_for(request), pk=pk)
+        try:
+            evidence = add_evidence(
+                incident=incident,
+                uploader=request.user,
+                uploaded_file=request.FILES.get("file"),
+            )
+        except WorkflowError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"{evidence.original_name} uploaded.")
+        return redirect(f"{incident.get_absolute_url()}#evidence")
+
+
+class EvidenceDownloadView(OrganizationRequiredMixin, View):
+    """The only way to read an evidence file. Same visibility rules as the incident,
+    so another organization's file (or a colleague's, for an employee) is a 404."""
+
+    def get(self, request, pk):
+        evidence = get_object_or_404(
+            IncidentEvidence.objects.select_related("incident"),
+            pk=pk,
+            incident__in=incidents_for(request),
+        )
+        try:
+            handle = evidence.file.open("rb")
+        except (FileNotFoundError, ValueError) as error:
+            raise Http404("This file is no longer available on the server.") from error
+
+        log_action(
+            request.user,
+            "evidence.downloaded",
+            obj=evidence.incident,
+            details={
+                "reference": evidence.incident.reference,
+                "evidence_id": evidence.pk,
+                "filename": evidence.original_name,
+            },
+        )
+
+        inline = evidence.content_type in INLINE_TYPES and request.GET.get("download") != "1"
+        response = FileResponse(
+            handle,
+            as_attachment=not inline,
+            filename=evidence.original_name,
+            content_type=evidence.content_type,
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+        response["Cache-Control"] = "private, no-store"
+        return response

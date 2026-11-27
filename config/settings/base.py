@@ -97,3 +97,8 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Mbwira <no-reply@mbwira.local>")
+
+# Evidence uploads: private storage, never served directly by the web server.
+EVIDENCE_ROOT = Path(env("EVIDENCE_ROOT", default=str(BASE_DIR / "private_media")))
+EVIDENCE_MAX_BYTES = 5 * 1024 * 1024
+EVIDENCE_MAX_FILES = 25
